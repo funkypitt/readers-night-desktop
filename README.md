@@ -1,3 +1,5 @@
+![Reader's Night Filter](docs/banner.png)
+
 # Reader's Night Filter for the desktop and the browser
 
 Turns the screen gray and amber, with no blue light, at the brightness you choose. The
@@ -25,8 +27,8 @@ blue), then dimmed to 70 %.
 
 ## Install on a laptop
 
-Copy `readers-night-install.sh` to the laptop, then, in a terminal of the GNOME or Plasma
-session:
+Download `readers-night-install.sh` from the [latest release](../../releases/latest), then,
+in a terminal of the GNOME or Plasma session:
 
 ```sh
 bash readers-night-install.sh
@@ -50,7 +52,8 @@ bash readers-night-install.sh --uninstall
 
 ## Install in Chrome or Brave
 
-Unzip `readers-night-browser-<version>.zip`, open `chrome://extensions` (or
+Download `readers-night-browser-<version>.zip` from the [latest release](../../releases/latest),
+unzip it, open `chrome://extensions` (or
 `brave://extensions`), switch on Developer mode, choose Load unpacked and pick the
 folder. Click the crescent in the toolbar for the switch and the brightness.
 
