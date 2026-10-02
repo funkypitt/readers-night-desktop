@@ -1,0 +1,20 @@
+{
+  "name": {
+    "message": "Reader's Night Filter"
+  },
+  "description": {
+    "message": "Turns every page gray and amber, with no blue light, at the brightness you choose."
+  },
+  "command": {
+    "message": "Switch the night filter on or off"
+  },
+  "brightness": {
+    "message": "Brightness"
+  },
+  "gray": {
+    "message": "Gray before amber"
+  },
+  "limits": {
+    "message": "The browser's own pages (settings, extension store) and its tab bar cannot be filtered."
+  }
+}

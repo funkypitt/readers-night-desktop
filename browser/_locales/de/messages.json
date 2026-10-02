@@ -1,0 +1,20 @@
+{
+  "name": {
+    "message": "Reader's Night Filter"
+  },
+  "description": {
+    "message": "Macht jede Seite grau und bernsteinfarben, ohne blaues Licht, in der Helligkeit Ihrer Wahl."
+  },
+  "command": {
+    "message": "Nachtfilter ein- oder ausschalten"
+  },
+  "brightness": {
+    "message": "Helligkeit"
+  },
+  "gray": {
+    "message": "Grau vor Bernstein"
+  },
+  "limits": {
+    "message": "Die eigenen Seiten des Browsers (Einstellungen, Erweiterungs-Store) und seine Tableiste können nicht gefiltert werden."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": {
+    "message": "Reader's Night Filter"
+  },
+  "description": {
+    "message": "Rend chaque page grise et ambrée, sans lumière bleue, à la luminosité de votre choix."
+  },
+  "command": {
+    "message": "Activer ou désactiver le filtre de nuit"
+  },
+  "brightness": {
+    "message": "Luminosité"
+  },
+  "gray": {
+    "message": "Gris avant l'ambre"
+  },
+  "limits": {
+    "message": "Les pages du navigateur lui-même (réglages, boutique d'extensions) et sa barre d'onglets ne peuvent pas être filtrées."
+  }
+}

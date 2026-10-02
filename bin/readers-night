@@ -1,0 +1,395 @@
+#!/usr/bin/env bash
+# Reader's Night Filter: the command behind the switch.
+#
+#   readers-night on | off | toggle | status
+#   readers-night brightness 15..100
+#   readers-night gray on | off
+#   readers-night notify on | off
+#   readers-night schedule 21:30 07:00      on at the first time, off at the second
+#   readers-night schedule off
+#   readers-night settings                  GNOME only: opens the settings window
+#
+# On GNOME the filter is a Shell extension and this command only flips its settings; the
+# extension notifies. On Plasma the filter has two halves that this command drives
+# together: a KWin effect (gray, brightness) that it loads and unloads, and Plasma's own
+# Night Light, set to a constant 1900 K for the amber and put back as it was afterwards.
+# The notification is sent from here.
+
+set -u
+
+UUID="readers-night@gallaz.ch"
+SCHEMA="org.gnome.shell.extensions.readers-night"
+EXT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$UUID"
+EFFECT="readersnight"
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/readers-night"
+UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+APP_NAME="Reader's Night Filter"
+SELF="$(readlink -f "$0")"
+
+# --- words -------------------------------------------------------------------
+
+lang="${LC_ALL:-${LC_MESSAGES:-${LANG:-en}}}"
+lang="${lang:0:2}"
+case "$lang" in fr|de|es|pt|ru) ;; *) lang=en ;; esac
+
+say() {  # say KEY [number]
+    local text
+    case "$lang:$1" in
+        en:on) text="Night filter on" ;;
+        en:off) text="Night filter off" ;;
+        en:look_gray) text="Gray and amber, brightness %d %%" ;;
+        en:look_colour) text="Amber, brightness %d %%" ;;
+        en:failed) text="The night filter could not be switched on" ;;
+        en:failed_body) text="The window manager refused the effect." ;;
+        en:no_tint) text="The amber tint could not be applied" ;;
+        en:no_tint_body) text="Night Light is not available on this screen. The screen is gray and dimmed, but still has blue light." ;;
+        en:sched) text="On at %s, off at %s." ;;
+        en:sched_none) text="No schedule." ;;
+        en:usage) text="Usage: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
+        en:no_desktop) text="Reader's Night Filter works on GNOME and on KDE Plasma; neither was found in this session." ;;
+        en:not_installed) text="The filter is not installed for this desktop. Run the installer again." ;;
+        en:bad_time) text="Times are written HH:MM, for example 21:30." ;;
+        en:bad_number) text="Brightness is a number from 15 to 100." ;;
+
+        fr:on) text="Filtre de nuit activé" ;;
+        fr:off) text="Filtre de nuit désactivé" ;;
+        fr:look_gray) text="Gris et ambre, luminosité %d %%" ;;
+        fr:look_colour) text="Ambre, luminosité %d %%" ;;
+        fr:failed) text="Le filtre de nuit n’a pas pu être activé" ;;
+        fr:failed_body) text="Le gestionnaire de fenêtres a refusé l’effet." ;;
+        fr:no_tint) text="La teinte ambrée n’a pas pu être appliquée" ;;
+        fr:no_tint_body) text="Le mode nuit n’est pas disponible sur cet écran. L’écran est gris et atténué, mais émet encore de la lumière bleue." ;;
+        fr:sched) text="Activé à %s, désactivé à %s." ;;
+        fr:sched_none) text="Aucun horaire." ;;
+        fr:usage) text="Usage : readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
+        fr:no_desktop) text="Reader's Night Filter fonctionne sous GNOME et sous KDE Plasma ; aucun des deux n’a été trouvé dans cette session." ;;
+        fr:not_installed) text="Le filtre n’est pas installé pour ce bureau. Relancez l’installateur." ;;
+        fr:bad_time) text="Les heures s’écrivent HH:MM, par exemple 21:30." ;;
+        fr:bad_number) text="La luminosité est un nombre de 15 à 100." ;;
+
+        de:on) text="Nachtfilter ein" ;;
+        de:off) text="Nachtfilter aus" ;;
+        de:look_gray) text="Grau und Bernstein, Helligkeit %d %%" ;;
+        de:look_colour) text="Bernstein, Helligkeit %d %%" ;;
+        de:failed) text="Der Nachtfilter konnte nicht eingeschaltet werden" ;;
+        de:failed_body) text="Die Fensterverwaltung hat den Effekt abgelehnt." ;;
+        de:no_tint) text="Die Bernsteintönung konnte nicht angewendet werden" ;;
+        de:no_tint_body) text="Die Nachtfarben sind auf diesem Bildschirm nicht verfügbar. Der Bildschirm ist grau und gedimmt, strahlt aber weiter blaues Licht ab." ;;
+        de:sched) text="Ein um %s, aus um %s." ;;
+        de:sched_none) text="Kein Zeitplan." ;;
+        de:usage) text="Aufruf: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
+        de:no_desktop) text="Reader's Night Filter läuft unter GNOME und KDE Plasma; keines von beiden wurde in dieser Sitzung gefunden." ;;
+        de:not_installed) text="Der Filter ist für diese Arbeitsumgebung nicht installiert. Starten Sie das Installationsprogramm erneut." ;;
+        de:bad_time) text="Uhrzeiten werden als HH:MM geschrieben, zum Beispiel 21:30." ;;
+        de:bad_number) text="Die Helligkeit ist eine Zahl von 15 bis 100." ;;
+
+        es:on) text="Filtro nocturno activado" ;;
+        es:off) text="Filtro nocturno desactivado" ;;
+        es:look_gray) text="Gris y ámbar, brillo %d %%" ;;
+        es:look_colour) text="Ámbar, brillo %d %%" ;;
+        es:failed) text="No se ha podido activar el filtro nocturno" ;;
+        es:failed_body) text="El gestor de ventanas ha rechazado el efecto." ;;
+        es:no_tint) text="No se ha podido aplicar el tono ámbar" ;;
+        es:no_tint_body) text="La luz nocturna no está disponible en esta pantalla. La pantalla está gris y atenuada, pero sigue emitiendo luz azul." ;;
+        es:sched) text="Se activa a las %s, se desactiva a las %s." ;;
+        es:sched_none) text="Sin horario." ;;
+        es:usage) text="Uso: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
+        es:no_desktop) text="Reader's Night Filter funciona en GNOME y en KDE Plasma; no se ha encontrado ninguno en esta sesión." ;;
+        es:not_installed) text="El filtro no está instalado para este escritorio. Ejecute de nuevo el instalador." ;;
+        es:bad_time) text="Las horas se escriben HH:MM, por ejemplo 21:30." ;;
+        es:bad_number) text="El brillo es un número de 15 a 100." ;;
+
+        pt:on) text="Filtro noturno ligado" ;;
+        pt:off) text="Filtro noturno desligado" ;;
+        pt:look_gray) text="Cinzento e âmbar, brilho %d %%" ;;
+        pt:look_colour) text="Âmbar, brilho %d %%" ;;
+        pt:failed) text="Não foi possível ligar o filtro noturno" ;;
+        pt:failed_body) text="O gestor de janelas recusou o efeito." ;;
+        pt:no_tint) text="Não foi possível aplicar o tom âmbar" ;;
+        pt:no_tint_body) text="A luz noturna não está disponível neste ecrã. O ecrã está cinzento e escurecido, mas continua a emitir luz azul." ;;
+        pt:sched) text="Liga às %s, desliga às %s." ;;
+        pt:sched_none) text="Sem horário." ;;
+        pt:usage) text="Utilização: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
+        pt:no_desktop) text="O Reader's Night Filter funciona no GNOME e no KDE Plasma; nenhum dos dois foi encontrado nesta sessão." ;;
+        pt:not_installed) text="O filtro não está instalado para este ambiente. Execute novamente o instalador." ;;
+        pt:bad_time) text="As horas escrevem-se HH:MM, por exemplo 21:30." ;;
+        pt:bad_number) text="O brilho é um número de 15 a 100." ;;
+
+        ru:on) text="Ночной фильтр включён" ;;
+        ru:off) text="Ночной фильтр выключен" ;;
+        ru:look_gray) text="Серый и янтарный, яркость %d %%" ;;
+        ru:look_colour) text="Янтарный, яркость %d %%" ;;
+        ru:failed) text="Не удалось включить ночной фильтр" ;;
+        ru:failed_body) text="Диспетчер окон отклонил эффект." ;;
+        ru:no_tint) text="Не удалось применить янтарный оттенок" ;;
+        ru:no_tint_body) text="Ночная цветовая схема недоступна на этом экране. Экран серый и затемнённый, но всё ещё излучает синий свет." ;;
+        ru:sched) text="Включается в %s, выключается в %s." ;;
+        ru:sched_none) text="Расписания нет." ;;
+        ru:usage) text="Использование: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule ЧЧ:ММ ЧЧ:ММ | schedule off" ;;
+        ru:no_desktop) text="Reader's Night Filter работает в GNOME и в KDE Plasma; в этом сеансе не найдено ни того, ни другого." ;;
+        ru:not_installed) text="Фильтр не установлен для этого рабочего стола. Запустите установщик ещё раз." ;;
+        ru:bad_time) text="Время пишется как ЧЧ:ММ, например 21:30." ;;
+        ru:bad_number) text="Яркость — число от 15 до 100." ;;
+    esac
+    # shellcheck disable=SC2059
+    printf "$text" "${@:2}"
+}
+
+die() { say "$1" >&2; echo >&2; exit "${2:-1}"; }
+
+# --- which desktop -----------------------------------------------------------
+
+# A systemd timer does not always carry the session's variables, so the installer also
+# writes the desktop it found.
+backend() {
+    case "${XDG_CURRENT_DESKTOP:-}" in
+        *GNOME*) echo gnome; return ;;
+        *KDE*) echo plasma; return ;;
+    esac
+    [ -r "$CONF_DIR/backend" ] && cat "$CONF_DIR/backend"
+}
+
+notify() {  # notify TITLE BODY -- never fails: a missing notification service is not an error
+    local icon="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps/readers-night.svg"
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -a "$APP_NAME" -i "$icon" -e "$1" "$2" 2>/dev/null \
+            || notify-send -a "$APP_NAME" -i "$icon" "$1" "$2" 2>/dev/null
+    else
+        busctl --user call org.freedesktop.Notifications /org/freedesktop/Notifications \
+            org.freedesktop.Notifications Notify susssasa\{sv\}i \
+            "$APP_NAME" 0 "$icon" "$1" "$2" 0 0 5000 >/dev/null 2>&1
+    fi
+    return 0
+}
+
+# --- GNOME: the extension's settings -----------------------------------------
+
+gnome_get() { gsettings --schemadir "$EXT_DIR/schemas" get "$SCHEMA" "$1" 2>/dev/null; }
+gnome_set() { gsettings --schemadir "$EXT_DIR/schemas" set "$SCHEMA" "$1" "$2"; }
+
+gnome_installed() { [ -r "$EXT_DIR/schemas/gschemas.compiled" ]; }
+gnome_active() { [ "$(gnome_get active)" = true ]; }
+gnome_switch() { gnome_set active "$1"; }          # the extension notifies
+gnome_brightness() { gnome_get brightness; }
+gnome_gray() { gnome_get grayscale; }
+gnome_notify() { gnome_get notify; }
+gnome_set_brightness() { gnome_set brightness "$1"; }
+gnome_set_gray() { gnome_set grayscale "$1"; }
+gnome_set_notify() { gnome_set notify "$1"; }
+
+# --- Plasma: a KWin effect ---------------------------------------------------
+
+kread() { kreadconfig6 --file kwinrc --group "$1" --key "$2" --default "$3" 2>/dev/null; }
+kwrite() { kwriteconfig6 --file kwinrc --group "$1" --key "$2" "$3" 2>/dev/null; }
+kwin_effects() {
+    busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects "$@" 2>/dev/null
+}
+
+plasma_installed() { [ -r "${XDG_DATA_HOME:-$HOME/.local/share}/kwin/effects/$EFFECT/metadata.json" ]; }
+plasma_active() { [ "$(kread Plugins "${EFFECT}Enabled" false)" = true ]; }
+plasma_brightness() { kread "Effect-$EFFECT" Brightness 70; }
+plasma_gray() { kread "Effect-$EFFECT" Grayscale true; }
+plasma_notify() { kread "Effect-$EFFECT" Notify true; }
+
+plasma_announce() {
+    [ "$(plasma_notify)" = true ] || return 0
+    if [ "$1" = true ]; then
+        local look=look_gray
+        [ "$(plasma_gray)" = true ] || look=look_colour
+        notify "$(say on)" "$(say "$look" "$(plasma_brightness)")"
+    else
+        notify "$(say off)" ""
+    fi
+}
+
+# Plasma's Night Light, borrowed for the amber: a constant 1900 K, the coolest
+# temperature at which KWin's own table has no blue left. What the user had (on or off,
+# schedule, temperature) is written down first and put back when the filter goes off.
+NL_SAVED="$CONF_DIR/nightlight.saved"
+NL_KEYS="Mode NightTemperature Active"
+
+# Every key is written with --notify: KWin rereads Night Light when one of them
+# changes, and which ones change depends on what the user had.
+nl_write() { kwriteconfig6 --file kwinrc --group NightColor --key "$1" --notify "$2" 2>/dev/null; }
+
+night_light_take() {
+    if [ ! -e "$NL_SAVED" ]; then
+        mkdir -p "$CONF_DIR"
+        for key in $NL_KEYS; do echo "$key=$(kread NightColor "$key" __unset__)"; done > "$NL_SAVED"
+    fi
+    nl_write Mode Constant
+    nl_write NightTemperature 1900
+    nl_write Active true
+}
+
+night_light_give_back() {
+    [ -r "$NL_SAVED" ] || return 0
+    local key value
+    while IFS='=' read -r key value; do
+        if [ "$value" = __unset__ ]; then
+            kwriteconfig6 --file kwinrc --group NightColor --key "$key" --delete --notify 2>/dev/null
+        else
+            nl_write "$key" "$value"
+        fi
+    done < "$NL_SAVED"
+    rm -f "$NL_SAVED"
+}
+
+night_light_available() {
+    local reply
+    reply="$(busctl --user get-property org.kde.KWin /org/kde/KWin/NightLight org.kde.KWin.NightLight available 2>/dev/null)"
+    [ "$reply" != "b false" ]      # no answer (KWin not up yet) is not a refusal
+}
+
+plasma_switch() {
+    # The key makes KWin bring the effect back by itself at the next login.
+    kwrite Plugins "${EFFECT}Enabled" "$1"
+    if [ "$1" = true ]; then
+        local reply="b true" try
+        if [ "$(kwin_effects isEffectLoaded s "$EFFECT")" != "b true" ]; then
+            # A KWin that has only just started says no for its first seconds.
+            for try in 1 2 3 4 5 6; do
+                reply="$(kwin_effects loadEffect s "$EFFECT")"
+                [ "$reply" = "b false" ] || break
+                sleep 1
+            done
+        fi
+        if [ "$reply" != "b true" ] && [ -n "$reply" ]; then
+            kwrite Plugins "${EFFECT}Enabled" false
+            notify "$(say failed)" "$(say failed_body)"
+            die failed 3
+        fi
+        # No reply at all: KWin is not running yet (a timer at login); the key will do.
+        night_light_take
+        if ! night_light_available; then
+            notify "$(say no_tint)" "$(say no_tint_body)"
+            return 0
+        fi
+    else
+        kwin_effects unloadEffect s "$EFFECT" >/dev/null
+        night_light_give_back
+    fi
+    plasma_announce "$1"
+    return 0
+}
+
+# A setting changed: the running effect reads its settings when it loads.
+plasma_reload() {
+    plasma_active || return 0
+    kwin_effects reconfigureEffect s "$EFFECT" >/dev/null
+}
+plasma_set_brightness() { kwrite "Effect-$EFFECT" Brightness "$1"; plasma_reload; }
+plasma_set_gray() { kwrite "Effect-$EFFECT" Grayscale "$1"; plasma_reload; }
+plasma_set_notify() { kwrite "Effect-$EFFECT" Notify "$1"; }
+
+# --- schedule: one systemd timer, two times ----------------------------------
+
+valid_time() { [[ "$1" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]]; }
+
+# Is the clock inside the "on" span right now? The span may cross midnight.
+in_span() {  # in_span NOW ON OFF, all HH:MM
+    local now="${1/:/}" on="${2/:/}" off="${3/:/}"
+    now=$((10#$now)); on=$((10#$on)); off=$((10#$off))
+    if [ "$on" -le "$off" ]; then
+        [ "$now" -ge "$on" ] && [ "$now" -lt "$off" ]
+    else
+        [ "$now" -ge "$on" ] || [ "$now" -lt "$off" ]
+    fi
+}
+
+schedule_set() {
+    valid_time "$1" && valid_time "$2" || die bad_time 2
+    mkdir -p "$CONF_DIR" "$UNIT_DIR"
+    echo "$1 $2" > "$CONF_DIR/schedule"
+    cat > "$UNIT_DIR/readers-night-schedule.service" <<UNIT
+[Unit]
+Description=Reader's Night Filter: follow the schedule
+
+[Service]
+Type=oneshot
+ExecStart=$SELF apply-schedule
+UNIT
+    cat > "$UNIT_DIR/readers-night-schedule.timer" <<UNIT
+[Unit]
+Description=Reader's Night Filter: on at $1, off at $2
+
+[Timer]
+OnCalendar=*-*-* $1:00
+OnCalendar=*-*-* $2:00
+# Also shortly after login and after a time missed while the laptop slept.
+OnStartupSec=20
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT
+    systemctl --user daemon-reload
+    systemctl --user enable --now readers-night-schedule.timer >/dev/null 2>&1
+    apply_schedule
+}
+
+schedule_clear() {
+    systemctl --user disable --now readers-night-schedule.timer >/dev/null 2>&1
+    rm -f "$UNIT_DIR/readers-night-schedule.timer" "$UNIT_DIR/readers-night-schedule.service" "$CONF_DIR/schedule"
+    systemctl --user daemon-reload 2>/dev/null
+}
+
+apply_schedule() {
+    [ -r "$CONF_DIR/schedule" ] || return 0
+    local on off want
+    read -r on off < "$CONF_DIR/schedule"
+    if in_span "$(date +%H:%M)" "$on" "$off"; then want=true; else want=false; fi
+    switch_to "$want"
+}
+
+# --- commands ----------------------------------------------------------------
+
+B="$(backend)"
+[ -n "$B" ] || die no_desktop 4
+"${B}_installed" || die not_installed 5
+
+is_active() { "${B}_active"; }
+
+switch_to() {  # nothing happens, and nothing is announced, when already there
+    if [ "$1" = true ]; then is_active && return 0; else is_active || return 0; fi
+    "${B}_switch" "$1"
+}
+
+onoff() {
+    case "$1" in on|true|yes|1) echo true ;; off|false|no|0) echo false ;; *) die usage 2 ;; esac
+}
+
+case "${1:-status}" in
+    on) switch_to true ;;
+    off) switch_to false ;;
+    toggle) if is_active; then switch_to false; else switch_to true; fi ;;
+    status)
+        if is_active; then
+            look=look_gray; [ "$("${B}_gray")" = true ] || look=look_colour
+            echo "$(say on). $(say "$look" "$("${B}_brightness")")."
+        else
+            echo "$(say off)."
+        fi
+        if [ -r "$CONF_DIR/schedule" ]; then
+            read -r s_on s_off < "$CONF_DIR/schedule"
+            say sched "$s_on" "$s_off"; echo
+        else
+            say sched_none; echo
+        fi
+        ;;
+    brightness)
+        [[ "${2:-}" =~ ^[0-9]+$ ]] && [ "$2" -ge 15 ] && [ "$2" -le 100 ] || die bad_number 2
+        "${B}_set_brightness" "$2" ;;
+    gray|grey) [ $# -ge 2 ] || die usage 2; "${B}_set_gray" "$(onoff "$2")" ;;
+    notify) [ $# -ge 2 ] || die usage 2; "${B}_set_notify" "$(onoff "$2")" ;;
+    schedule)
+        if [ "${2:-}" = off ]; then schedule_clear
+        elif [ $# -eq 3 ]; then schedule_set "$2" "$3"
+        else die usage 2; fi ;;
+    apply-schedule) apply_schedule ;;
+    settings)      # GNOME has a settings window; on Plasma the settings are the commands above
+        [ "$B" = gnome ] && exec gnome-extensions prefs "$UUID"
+        say usage; echo ;;
+    -h|--help|help) say usage; echo ;;
+    *) die usage 2 ;;
+esac

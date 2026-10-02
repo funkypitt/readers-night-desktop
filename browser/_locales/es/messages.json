@@ -1,0 +1,20 @@
+{
+  "name": {
+    "message": "Reader's Night Filter"
+  },
+  "description": {
+    "message": "Vuelve cada página gris y ámbar, sin luz azul, con el brillo que usted elija."
+  },
+  "command": {
+    "message": "Activar o desactivar el filtro nocturno"
+  },
+  "brightness": {
+    "message": "Brillo"
+  },
+  "gray": {
+    "message": "Gris antes del ámbar"
+  },
+  "limits": {
+    "message": "Las páginas propias del navegador (ajustes, tienda de extensiones) y su barra de pestañas no se pueden filtrar."
+  }
+}

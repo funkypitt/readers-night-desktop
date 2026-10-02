@@ -1,0 +1,10 @@
+{
+  "uuid": "readers-night@gallaz.ch",
+  "name": "Reader's Night Filter",
+  "description": "Turns the whole screen gray and amber, with no blue light, at the brightness you choose. One switch in the quick settings.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "session-modes": ["user", "unlock-dialog"],
+  "settings-schema": "org.gnome.shell.extensions.readers-night",
+  "url": "https://gallaz.ch/eink",
+  "version-name": "1.0.0"
+}

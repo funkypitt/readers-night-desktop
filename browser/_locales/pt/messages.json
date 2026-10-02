@@ -1,0 +1,20 @@
+{
+  "name": {
+    "message": "Reader's Night Filter"
+  },
+  "description": {
+    "message": "Torna cada página cinzenta e âmbar, sem luz azul, com o brilho que escolher."
+  },
+  "command": {
+    "message": "Ligar ou desligar o filtro noturno"
+  },
+  "brightness": {
+    "message": "Brilho"
+  },
+  "gray": {
+    "message": "Cinzento antes do âmbar"
+  },
+  "limits": {
+    "message": "As páginas do próprio navegador (definições, loja de extensões) e a sua barra de separadores não podem ser filtradas."
+  }
+}

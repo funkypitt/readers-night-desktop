@@ -1,0 +1,21 @@
+{
+    "KPackageStructure": "KWin/Effect",
+    "KPlugin": {
+        "Authors": [{ "Name": "Pierre Gallaz" }],
+        "Category": "Accessibility",
+        "Description": "Turns the whole screen gray and amber, with no blue light",
+        "Description[fr]": "Rend tout l’écran gris et ambré, sans lumière bleue",
+        "Description[de]": "Macht den ganzen Bildschirm grau und bernsteinfarben, ohne blaues Licht",
+        "Description[es]": "Vuelve toda la pantalla gris y ámbar, sin luz azul",
+        "Description[pt]": "Torna todo o ecrã cinzento e âmbar, sem luz azul",
+        "Description[ru]": "Делает весь экран серо-янтарным, без синего света",
+        "EnabledByDefault": false,
+        "Id": "readersnight",
+        "License": "MIT",
+        "Name": "Reader's Night Filter",
+        "Version": "1.0.0",
+        "Website": "https://gallaz.ch/eink"
+    },
+    "X-KDE-Ordering": 99,
+    "X-Plasma-API": "javascript"
+}

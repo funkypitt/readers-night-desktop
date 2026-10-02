@@ -1,0 +1,133 @@
+// The few sentences the extension shows, in the six languages of the Reader's apps.
+import GLib from 'gi://GLib';
+
+const STRINGS = {
+    en: {
+        title: 'Night Filter',
+        on: 'Night filter on',
+        off: 'Night filter off',
+        lookGray: 'Gray and amber, brightness %d %',
+        lookColour: 'Amber, brightness %d %',
+        failed: 'The night filter could not be applied',
+        failedBody: 'This version of GNOME refused the filter.',
+        prefSwitch: 'Night filter',
+        prefSwitchSub: 'Also in the quick settings, top right of the screen',
+        prefGray: 'Gray before amber',
+        prefGraySub: 'Off: colours are kept and only tinted',
+        prefBrightness: 'Brightness',
+        prefBrightnessSub: 'How much light is kept while the filter is on, in percent',
+        prefNotify: 'Notifications',
+        prefNotifySub: 'Say when the filter switches on or off',
+        prefShortcut: 'Keyboard shortcut',
+        prefLimits: 'The mouse pointer keeps its own colours, and screenshots taken while the filter is on come out amber.',
+    },
+    fr: {
+        title: 'Filtre de nuit',
+        on: 'Filtre de nuit activé',
+        off: 'Filtre de nuit désactivé',
+        lookGray: 'Gris et ambre, luminosité %d %',
+        lookColour: 'Ambre, luminosité %d %',
+        failed: 'Le filtre de nuit n’a pas pu être appliqué',
+        failedBody: 'Cette version de GNOME a refusé le filtre.',
+        prefSwitch: 'Filtre de nuit',
+        prefSwitchSub: 'Aussi dans les réglages rapides, en haut à droite de l’écran',
+        prefGray: 'Gris avant l’ambre',
+        prefGraySub: 'Désactivé : les couleurs sont gardées et seulement teintées',
+        prefBrightness: 'Luminosité',
+        prefBrightnessSub: 'Part de lumière gardée quand le filtre est actif, en pour cent',
+        prefNotify: 'Notifications',
+        prefNotifySub: 'Signaler quand le filtre s’active ou se désactive',
+        prefShortcut: 'Raccourci clavier',
+        prefLimits: 'Le pointeur de la souris garde ses couleurs, et les captures d’écran faites pendant que le filtre est actif sortent ambrées.',
+    },
+    de: {
+        title: 'Nachtfilter',
+        on: 'Nachtfilter ein',
+        off: 'Nachtfilter aus',
+        lookGray: 'Grau und Bernstein, Helligkeit %d %',
+        lookColour: 'Bernstein, Helligkeit %d %',
+        failed: 'Der Nachtfilter konnte nicht angewendet werden',
+        failedBody: 'Diese GNOME-Version hat den Filter abgelehnt.',
+        prefSwitch: 'Nachtfilter',
+        prefSwitchSub: 'Auch in den Schnelleinstellungen, oben rechts am Bildschirm',
+        prefGray: 'Grau vor Bernstein',
+        prefGraySub: 'Aus: Farben bleiben erhalten und werden nur getönt',
+        prefBrightness: 'Helligkeit',
+        prefBrightnessSub: 'Wie viel Licht bei eingeschaltetem Filter bleibt, in Prozent',
+        prefNotify: 'Benachrichtigungen',
+        prefNotifySub: 'Melden, wenn der Filter ein- oder ausgeschaltet wird',
+        prefShortcut: 'Tastenkürzel',
+        prefLimits: 'Der Mauszeiger behält seine Farben, und Bildschirmfotos bei eingeschaltetem Filter werden bernsteinfarben.',
+    },
+    es: {
+        title: 'Filtro nocturno',
+        on: 'Filtro nocturno activado',
+        off: 'Filtro nocturno desactivado',
+        lookGray: 'Gris y ámbar, brillo %d %',
+        lookColour: 'Ámbar, brillo %d %',
+        failed: 'No se ha podido aplicar el filtro nocturno',
+        failedBody: 'Esta versión de GNOME ha rechazado el filtro.',
+        prefSwitch: 'Filtro nocturno',
+        prefSwitchSub: 'También en los ajustes rápidos, arriba a la derecha de la pantalla',
+        prefGray: 'Gris antes del ámbar',
+        prefGraySub: 'Desactivado: los colores se conservan y solo se tiñen',
+        prefBrightness: 'Brillo',
+        prefBrightnessSub: 'Cuánta luz se conserva con el filtro activado, en porcentaje',
+        prefNotify: 'Notificaciones',
+        prefNotifySub: 'Avisar cuando el filtro se activa o se desactiva',
+        prefShortcut: 'Atajo de teclado',
+        prefLimits: 'El puntero del ratón conserva sus colores, y las capturas de pantalla hechas con el filtro activado salen en ámbar.',
+    },
+    pt: {
+        title: 'Filtro noturno',
+        on: 'Filtro noturno ligado',
+        off: 'Filtro noturno desligado',
+        lookGray: 'Cinzento e âmbar, brilho %d %',
+        lookColour: 'Âmbar, brilho %d %',
+        failed: 'Não foi possível aplicar o filtro noturno',
+        failedBody: 'Esta versão do GNOME recusou o filtro.',
+        prefSwitch: 'Filtro noturno',
+        prefSwitchSub: 'Também nas definições rápidas, no canto superior direito do ecrã',
+        prefGray: 'Cinzento antes do âmbar',
+        prefGraySub: 'Desligado: as cores são mantidas e apenas tingidas',
+        prefBrightness: 'Brilho',
+        prefBrightnessSub: 'Quanta luz é mantida com o filtro ligado, em percentagem',
+        prefNotify: 'Notificações',
+        prefNotifySub: 'Avisar quando o filtro é ligado ou desligado',
+        prefShortcut: 'Atalho de teclado',
+        prefLimits: 'O ponteiro do rato mantém as suas cores, e as capturas de ecrã feitas com o filtro ligado ficam em âmbar.',
+    },
+    ru: {
+        title: 'Ночной фильтр',
+        on: 'Ночной фильтр включён',
+        off: 'Ночной фильтр выключен',
+        lookGray: 'Серый и янтарный, яркость %d %',
+        lookColour: 'Янтарный, яркость %d %',
+        failed: 'Не удалось применить ночной фильтр',
+        failedBody: 'Эта версия GNOME отклонила фильтр.',
+        prefSwitch: 'Ночной фильтр',
+        prefSwitchSub: 'Также в быстрых настройках, в правом верхнем углу экрана',
+        prefGray: 'Серый перед янтарным',
+        prefGraySub: 'Выключено: цвета сохраняются и только тонируются',
+        prefBrightness: 'Яркость',
+        prefBrightnessSub: 'Сколько света остаётся при включённом фильтре, в процентах',
+        prefNotify: 'Уведомления',
+        prefNotifySub: 'Сообщать, когда фильтр включается или выключается',
+        prefShortcut: 'Сочетание клавиш',
+        prefLimits: 'Указатель мыши сохраняет свои цвета, а снимки экрана при включённом фильтре получаются янтарными.',
+    },
+};
+
+function table() {
+    for (const name of GLib.get_language_names()) {
+        const lang = name.slice(0, 2).toLowerCase();
+        if (STRINGS[lang])
+            return STRINGS[lang];
+    }
+    return STRINGS.en;
+}
+
+export function tr(key, number) {
+    const text = table()[key] ?? STRINGS.en[key] ?? key;
+    return number === undefined ? text : text.replace('%d', String(number));
+}

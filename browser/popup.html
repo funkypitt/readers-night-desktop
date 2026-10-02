@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* The popup is the one surface the filter cannot reach, so it is drawn blue-free itself. */
+  :root { color-scheme: dark; --ground: #0d0a06; --line: #3a2a12; --amber: #ff8400; --soft: #a85a00; }
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 280px; padding: 16px; background: var(--ground); color: var(--amber);
+         font: 14px/1.4 system-ui, "Ubuntu", "Noto Sans", sans-serif; display: flex; flex-direction: column; gap: 16px; }
+  h1 { margin: 0; font-size: 15px; font-weight: 600; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .stack { display: flex; flex-direction: column; gap: 6px; }
+  input[type="checkbox"] { appearance: none; width: 40px; height: 22px; border-radius: 11px; border: 1px solid var(--soft);
+         background: transparent; position: relative; cursor: pointer; margin: 0; flex: none; }
+  input[type="checkbox"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+         border-radius: 50%; background: var(--soft); transition: left .12s; }
+  input[type="checkbox"]:checked { background: var(--amber); border-color: var(--amber); }
+  input[type="checkbox"]:checked::after { left: 20px; background: var(--ground); }
+  input[type="range"] { width: 100%; accent-color: var(--amber); margin: 0; }
+  input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  output { font-variant-numeric: tabular-nums; }
+  .dependent[aria-disabled="true"] { opacity: .45; }
+  p { margin: 0; color: var(--soft); font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  @media (prefers-reduced-motion: reduce) { input[type="checkbox"]::after { transition: none; } }
+</style>
+</head>
+<body>
+  <label class="row" for="enabled"><h1 data-msg="name"></h1><input type="checkbox" id="enabled"></label>
+  <div class="dependent stack" id="dependent">
+    <div class="stack">
+      <div class="row"><label for="dim" data-msg="brightness"></label><output id="dim-out" for="dim"></output></div>
+      <input type="range" id="dim" min="15" max="100" step="5">
+    </div>
+    <label class="row" for="gray"><span data-msg="gray"></span><input type="checkbox" id="gray"></label>
+  </div>
+  <p data-msg="limits"></p>
+  <script src="state.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

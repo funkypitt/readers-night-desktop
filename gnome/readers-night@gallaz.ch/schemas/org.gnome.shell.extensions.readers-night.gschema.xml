@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.readers-night" path="/org/gnome/shell/extensions/readers-night/">
+    <key name="active" type="b">
+      <default>false</default>
+      <summary>The filter is on</summary>
+    </key>
+    <key name="grayscale" type="b">
+      <default>true</default>
+      <summary>Turn colours to gray before the amber tint</summary>
+    </key>
+    <key name="brightness" type="i">
+      <range min="15" max="100"/>
+      <default>70</default>
+      <summary>Brightness kept while the filter is on, in percent</summary>
+    </key>
+    <key name="notify" type="b">
+      <default>true</default>
+      <summary>Show a notification when the filter switches on or off</summary>
+    </key>
+    <key name="toggle-shortcut" type="as">
+      <default><![CDATA[['<Super><Shift>n']]]></default>
+      <summary>Keyboard shortcut that switches the filter</summary>
+    </key>
+  </schema>
+</schemalist>
