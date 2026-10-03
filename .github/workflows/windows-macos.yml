@@ -13,6 +13,7 @@ name: Windows and macOS builds
 on:
   push:
     tags: ['v*']
+    branches: ['**']
     paths: ['windows/**', 'macos/**', '.github/workflows/windows-macos.yml']
   workflow_dispatch:
 
