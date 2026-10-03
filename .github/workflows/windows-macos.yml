@@ -1,0 +1,109 @@
+# Windows and macOS builds of Reader's Night Filter.
+#
+# Runs on every push that touches them, on a v* tag (the files are then attached to that
+# tag's release) and on demand from the Actions tab. Each job checks the screen effect on
+# the runner with --self-test: the runner has no real panel, so the report says whether
+# the system accepted the colours, not what they look like.
+#
+# Neither file is signed: Windows shows a SmartScreen warning, macOS asks for the first
+# opening to be confirmed in System Settings. The README says so to the reader.
+
+name: Windows and macOS builds
+
+on:
+  push:
+    tags: ['v*']
+    paths: ['windows/**', 'macos/**', '.github/workflows/windows-macos.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' windows/ReadersNight.csproj)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          dotnet build windows/ReadersNight.csproj -c Release -o build
+          mkdir -p out
+          cp build/ReadersNight.exe "out/readers-night_${VERSION}_windows.exe"
+
+      - name: Self-test
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem out\*.exe | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList '--self-test', "$PWD\selftest.txt" -Wait -PassThru
+          Get-Content selftest.txt
+          if ($p.ExitCode -ne 0) { throw "self-test failed (exit code $($p.ExitCode))" }
+
+      - name: Does it start and stay?
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem out\*.exe | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) { throw "the app quit on its own (exit code $($p.ExitCode))" }
+          # A second start switches the first one and quits at once.
+          $q = Start-Process -FilePath $exe.FullName -PassThru -Wait
+          if ($p.HasExited) { throw "the first copy quit when the second one started" }
+          Get-Content "$env:APPDATA\Readers Night Filter\settings.txt"
+          Stop-Process -Id $p.Id
+          reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "Readers Night Filter" /f
+          Write-Host "it started, stayed, and a second start left it running"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: readers-night-windows
+          path: out/*
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "" || sleep 10
+          gh release upload "$GITHUB_REF_NAME" out/* --clobber
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: bash macos/build.sh
+
+      - name: Self-test
+        run: |
+          "macos/build/Reader's Night Filter.app/Contents/MacOS/ReadersNight" --self-test
+          lipo -archs "macos/build/Reader's Night Filter.app/Contents/MacOS/ReadersNight"
+
+      - name: Does it start and stay?
+        run: |
+          "macos/build/Reader's Night Filter.app/Contents/MacOS/ReadersNight" &
+          PID=$!
+          sleep 20
+          kill -0 "$PID" || { echo "the app quit on its own"; exit 1; }
+          kill "$PID"
+          echo "it started and stayed"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: readers-night-macos
+          path: macos/build/*.dmg
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "" || sleep 10
+          gh release upload "$GITHUB_REF_NAME" macos/build/*.dmg --clobber

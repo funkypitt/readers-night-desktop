@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- .NET Framework 4.8 is part of Windows 10 (1903 and later) and Windows 11, so the
+       .exe needs nothing installed and stays small. It must run as a 64-bit process:
+       the Magnification API is not available to 32-bit programs on 64-bit Windows. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AssemblyName>ReadersNight</AssemblyName>
+    <RootNamespace>ReadersNight</RootNamespace>
+    <ApplicationIcon>icons\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.1.0</Version>
+    <Product>Reader's Night Filter</Product>
+    <Company>Pierre Gallaz</Company>
+    <Copyright>© 2026 Pierre Gallaz, MIT</Copyright>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <EmbeddedResource Include="icons\on.ico" LogicalName="on.ico" />
+    <EmbeddedResource Include="icons\off.ico" LogicalName="off.ico" />
+  </ItemGroup>
+
+</Project>
