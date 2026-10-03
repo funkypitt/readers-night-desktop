@@ -74,7 +74,14 @@ jobs:
           gh release upload "$GITHUB_REF_NAME" out/* --clobber
 
   macos:
-    runs-on: macos-15
+    runs-on: ${{ matrix.os }}
+    # macos-15 builds what is published; the newest macOS only checks that the gray and
+    # the tables are still accepted there.
+    continue-on-error: ${{ matrix.os != 'macos-15' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
     steps:
       - uses: actions/checkout@v4
 
@@ -96,12 +103,13 @@ jobs:
           echo "it started and stayed"
 
       - uses: actions/upload-artifact@v4
+        if: matrix.os == 'macos-15'
         with:
           name: readers-night-macos
           path: macos/build/*.dmg
 
       - name: Attach to the release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && matrix.os == 'macos-15'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
