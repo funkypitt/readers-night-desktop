@@ -62,8 +62,41 @@ turns white into 70 % gray.
 - Tested on KWin 6.7.4 (Manjaro), virtual output, OpenGL through the host's Intel render
   device.
 
+## Windows
+
+- `MagSetFullscreenColorEffect`, the Magnification API's colour matrix over the whole
+  screen: no administrator rights, no `uiAccess`. Gray, tint and dim are one 5×5 matrix
+  on row vectors ([r g b a 1] × M), the same arithmetic as GNOME's shader.
+- 64-bit process only: the API is not available to 32-bit programs on 64-bit Windows
+  (AnyCPU with Prefer32Bit off).
+- The effect belongs to the process: Windows removes it when the process ends, crash
+  included. A timer sets it again every 2 s if what Windows reports differs.
+- .NET Framework 4.8 (part of Windows 10 1903+ and 11): a 70 KB .exe, nothing to install.
+  Built from Linux too, in the `mcr.microsoft.com/dotnet/sdk` image.
+- Second instance: a named mutex; the second copy sets a named event and quits, the first
+  toggles.
+- On the runner (Windows Server 2025, 10.0.26100) the matrices set are read back exactly.
+
+## macOS
+
+- Tint and dim: `CGSetDisplayTransferByTable`, the system's own curves (read after
+  `CGDisplayRestoreColorSyncSettings`) multiplied per channel. macOS restores them when
+  the app quits. They are set again after a display change, a wake, and whenever a
+  2-second check finds them gone.
+- Gray: `CGDisplayForceToGray` / `CGDisplayUsesForceToGray`, private CoreGraphics
+  functions looked up with `dlsym`; the same switch as Accessibility's grayscale. Accepted
+  on the runners' macOS 15.7 and 26.6. It outlives the app, so `grayForcedByUs` is kept
+  in the settings and a start after a crash turns it off again; a grayscale the user had
+  on already is left alone.
+- Which comes first on screen, the gray or the tables, is not visible from the runner
+  (screenshots show neither). If the tables come first, the gray of amber is a plain gray.
+- Shortcut through Carbon's `RegisterEventHotKey`, which needs no Accessibility permission.
+- Universal binary (arm64 + x86_64) from one `swiftc` file, ad hoc signed.
+
 ## Not tested
 
-A real laptop panel, a real Plasma session (panel, Overview, lock screen), fractional
+Windows and macOS on a real screen (the runners have none: the self-tests prove the
+system accepted the colours, not how they look), HDR on either, several monitors on
+macOS. On Linux: a real laptop panel, a real Plasma session (panel, Overview, lock screen), fractional
 scaling, several monitors, the systemd timer actually firing, GNOME 47 to 49, Brave
 itself (the tests drive Chromium).

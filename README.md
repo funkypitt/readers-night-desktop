@@ -3,8 +3,9 @@
 # Reader's Night Filter for the desktop and the browser
 
 Turns the screen gray and amber, with no blue light, at the brightness you choose. The
-desktop version covers the whole screen on GNOME (Xorg and Wayland sessions) and on KDE
-Plasma 6; the browser version covers the pages of Chrome and Brave on any system. A
+desktop version covers the whole screen on GNOME (Xorg and Wayland sessions), on KDE
+Plasma 6, on Windows 10 and 11 and on macOS 13 or newer; the browser version covers the
+pages of Chrome and Brave on any system. A
 companion of [Reader's Night Filter](https://github.com/funkypitt/readers-night) for
 Android, which cannot remove blue entirely; these can.
 
@@ -15,13 +16,14 @@ blue), then dimmed to 70 %.
 ## Key points
 
 - One switch: in the quick settings on GNOME, in the application menu on Plasma, in the
-  toolbar of the browser. Also a keyboard shortcut (Super+Shift+N on GNOME, Alt+Shift+N
-  in the browser) and the `readers-night` command.
+  notification area on Windows, in the menu bar on macOS, in the toolbar of the browser.
+  Also a keyboard shortcut (Super+Shift+N on GNOME, Win+Shift+N on Windows, ⌃⌥⌘N on
+  macOS, Alt+Shift+N in the browser) and the `readers-night` command on Linux.
 - A notification says when the filter switches on or off, and when a part of it could
   not be applied. It can be turned off.
 - Settings: gray or colours kept, brightness from 15 to 100 %.
 - A schedule if you want one: `readers-night schedule 21:30 07:00`.
-- Installed for one user, in the home folder, without root. `--uninstall` removes
+- Installed for one user, without administrator rights. On Linux `--uninstall` removes
   everything and puts Plasma's Night Light back as it was.
 - No network access. Six languages.
 
@@ -50,6 +52,35 @@ readers-night schedule off
 bash readers-night-install.sh --uninstall
 ```
 
+## Install on Windows
+
+Download `readers-night_<version>_windows.exe` from the [releases](../../releases), put it
+where it will stay (Documents, for example) and open it. Windows warns that it does not know
+the publisher: *More info* › *Run anyway*. The crescent appears in the notification area,
+bottom right; Windows may hide it under the ^ arrow, from where it can be dragged next to
+the clock.
+
+- A click on the crescent switches the filter; a right click opens the settings
+  (gray, brightness, notifications, schedule, start with Windows).
+- It starts with Windows from the first opening; untick it in the menu to stop that.
+- Opening the .exe again while it runs switches the filter, so a shortcut on the taskbar
+  works as a switch too.
+- To remove it: untick *Start with Windows*, *Quit*, delete the .exe and the folder
+  `%APPDATA%\Readers Night Filter`.
+
+Needs nothing installed: it uses the .NET Framework that comes with Windows 10 and 11.
+
+## Install on macOS
+
+Download `readers-night_<version>_macos.dmg` from the [releases](../../releases), open it
+and drag the app into Applications. The first opening is refused because the app is not
+notarised by Apple: open *System Settings* › *Privacy & Security*, click *Open Anyway* at
+the bottom, and confirm. Allow its notifications when macOS asks.
+
+- The crescent is in the menu bar, top right; its menu holds the switch and the settings.
+- It opens at login from the first opening (*Open at login* in the menu).
+- Apple Silicon and Intel, macOS 13 or newer.
+
 ## Install in Chrome or Brave
 
 Download `readers-night-browser-<version>.zip` from the [latest release](../../releases/latest),
@@ -66,6 +97,14 @@ folder. Click the crescent in the toolbar for the switch and the brightness.
   change you make to them in between is lost. The gray and the dimming are applied to
   windows, so the Overview and similar full-screen views show their thumbnails in
   colour (still without blue). Screenshots come out gray, not amber.
+- **Windows**: the effect is the one Windows' own colour filters and the Magnifier use;
+  while either is on, they and the night filter take turns. Screenshots keep their
+  colours. HDR displays not tried.
+- **macOS**: the amber and the dimming are the screen's colour tables, the gray is the
+  system's own grayscale (Accessibility › Display › Color Filters), switched by a function
+  Apple does not document: if a macOS update removes it, the app says so and the gray can
+  be turned on in System Settings by hand. If you already use that grayscale, the app
+  leaves it on when the filter goes off. Screenshots keep their colours.
 - **Browser**: the browser's own pages (settings, extension store) and its tab bar
   cannot be filtered. The dimming darkens the page, not the backlight.
 - The brightness setting darkens the picture; the backlight stays where the keyboard's
@@ -80,7 +119,12 @@ tools/build-installer.sh        # dist/readers-night-install.sh and the browser 
 python3 tests/browser_test.py   # needs Playwright with its Chromium
 ```
 
-The desktop tests run GNOME Shell and KWin in containers, install with the real
+Windows and macOS build on GitHub Actions (`.github/workflows/windows-macos.yml`), which
+also runs each app's `--self-test`: it sets the colours, reads them back from the system,
+and checks the gray and the schedule. The Windows app alone builds anywhere with
+`dotnet build windows/ReadersNight.csproj`; the Mac app with `macos/build.sh` on a Mac.
+
+The Linux desktop tests run GNOME Shell and KWin in containers, install with the real
 installer and compare pictures of the screen pixel by pixel:
 
 ```sh
