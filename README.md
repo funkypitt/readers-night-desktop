@@ -18,7 +18,8 @@ blue), then dimmed to 70 %.
 - One switch: in the quick settings on GNOME, in the application menu on Plasma, in the
   notification area on Windows, in the menu bar on macOS, in the toolbar of the browser.
   Also a keyboard shortcut (Super+Shift+N on GNOME, Win+Shift+N on Windows, ⌃⌥⌘N on
-  macOS, Alt+Shift+N in the browser) and the `readers-night` command on Linux.
+  macOS, Alt+Shift+N in the browser) and the `readers-night` command on Linux. On Plasma,
+  the Night Light switch in the system tray switches the whole filter too.
 - A notification says when the filter switches on or off, and when a part of it could
   not be applied. It can be turned off.
 - Settings: gray or colours kept, brightness from 15 to 100 %.
@@ -94,9 +95,12 @@ folder. Click the crescent in the toolbar for the switch and the brightness.
   made while the filter is on come out amber.
 - **Plasma**: the amber is Plasma's own Night Light, held at a constant 1900 K while the
   filter is on; your Night Light settings are saved and put back when it goes off, but a
-  change you make to them in between is lost. The gray and the dimming are applied to
-  windows, so the Overview and similar full-screen views show their thumbnails in
-  colour (still without blue). Screenshots come out gray, not amber.
+  change you make to them in between is lost. Plasma's Night Light switch in the system
+  tray pauses Night Light rather than turning it off: a small service installed with the
+  filter follows it, so that switch turns the whole filter off and on again (the switch
+  on its own would leave the screen gray without amber). The gray and the dimming are
+  applied to windows, so the Overview and similar full-screen views show their
+  thumbnails in colour (still without blue). Screenshots come out gray, not amber.
 - **Windows**: the effect is the one Windows' own colour filters and the Magnifier use;
   while either is on, they and the night filter take turns. Screenshots keep their
   colours. HDR displays not tried.

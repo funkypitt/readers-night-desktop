@@ -143,6 +143,7 @@ disable_extension() {
 uninstall() {
     if [ -x "$BIN/readers-night" ]; then
         "$BIN/readers-night" notify off >/dev/null 2>&1 || true
+        "$BIN/readers-night" watcher-remove >/dev/null 2>&1 || true
         "$BIN/readers-night" schedule off >/dev/null 2>&1 || true
         "$BIN/readers-night" off >/dev/null 2>&1 || true
     fi
@@ -225,6 +226,9 @@ else
     # An update: the effect already loaded is the old one.
     "$BIN/readers-night" off >/dev/null 2>&1 || true
     if "$BIN/readers-night" on >/dev/null 2>&1; then say done_plasma; else say failed_plasma; fi
+    # Plasma's own Night Light switch pauses the amber; the watcher makes it switch the
+    # whole filter.
+    "$BIN/readers-night" watcher-install >/dev/null 2>&1 || true
 fi
 
 case ":$PATH:" in

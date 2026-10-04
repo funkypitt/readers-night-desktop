@@ -13,7 +13,10 @@
 # extension notifies. On Plasma the filter has two halves that this command drives
 # together: a KWin effect (gray, brightness) that it loads and unloads, and Plasma's own
 # Night Light, set to a constant 1900 K for the amber and put back as it was afterwards.
-# The notification is sent from here.
+# The notification is sent from here. Plasma's own Night Light switch (in the system
+# tray) pauses Night Light without telling anyone: a small watcher (`watcher-run`, a
+# systemd user service installed with the filter) hears it over D-Bus and switches the
+# whole filter off with it, and back on when the switch is flipped again.
 
 set -u
 
@@ -43,6 +46,7 @@ say() {  # say KEY [number]
         en:failed_body) text="The window manager refused the effect." ;;
         en:no_tint) text="The amber tint could not be applied" ;;
         en:no_tint_body) text="Night Light is not available on this screen. The screen is gray and dimmed, but still has blue light." ;;
+        en:paused_body) text="Plasma’s Night Light is paused by its switch in the system tray. Switch it back on there to have the amber." ;;
         en:sched) text="On at %s, off at %s." ;;
         en:sched_none) text="No schedule." ;;
         en:usage) text="Usage: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
@@ -59,6 +63,7 @@ say() {  # say KEY [number]
         fr:failed_body) text="Le gestionnaire de fenêtres a refusé l’effet." ;;
         fr:no_tint) text="La teinte ambrée n’a pas pu être appliquée" ;;
         fr:no_tint_body) text="Le mode nuit n’est pas disponible sur cet écran. L’écran est gris et atténué, mais émet encore de la lumière bleue." ;;
+        fr:paused_body) text="Le mode nuit de Plasma est suspendu par son interrupteur dans la zone de notification. Réactivez-le là pour avoir l’ambre." ;;
         fr:sched) text="Activé à %s, désactivé à %s." ;;
         fr:sched_none) text="Aucun horaire." ;;
         fr:usage) text="Usage : readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
@@ -75,6 +80,7 @@ say() {  # say KEY [number]
         de:failed_body) text="Die Fensterverwaltung hat den Effekt abgelehnt." ;;
         de:no_tint) text="Die Bernsteintönung konnte nicht angewendet werden" ;;
         de:no_tint_body) text="Die Nachtfarben sind auf diesem Bildschirm nicht verfügbar. Der Bildschirm ist grau und gedimmt, strahlt aber weiter blaues Licht ab." ;;
+        de:paused_body) text="Die Nachtfarben von Plasma sind über ihren Schalter im Systemabschnitt der Kontrollleiste ausgesetzt. Schalten Sie sie dort wieder ein, um den Bernsteinton zu erhalten." ;;
         de:sched) text="Ein um %s, aus um %s." ;;
         de:sched_none) text="Kein Zeitplan." ;;
         de:usage) text="Aufruf: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
@@ -91,6 +97,7 @@ say() {  # say KEY [number]
         es:failed_body) text="El gestor de ventanas ha rechazado el efecto." ;;
         es:no_tint) text="No se ha podido aplicar el tono ámbar" ;;
         es:no_tint_body) text="La luz nocturna no está disponible en esta pantalla. La pantalla está gris y atenuada, pero sigue emitiendo luz azul." ;;
+        es:paused_body) text="La luz nocturna de Plasma está en pausa por su interruptor en la bandeja del sistema. Vuelva a activarla ahí para tener el ámbar." ;;
         es:sched) text="Se activa a las %s, se desactiva a las %s." ;;
         es:sched_none) text="Sin horario." ;;
         es:usage) text="Uso: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
@@ -107,6 +114,7 @@ say() {  # say KEY [number]
         pt:failed_body) text="O gestor de janelas recusou o efeito." ;;
         pt:no_tint) text="Não foi possível aplicar o tom âmbar" ;;
         pt:no_tint_body) text="A luz noturna não está disponível neste ecrã. O ecrã está cinzento e escurecido, mas continua a emitir luz azul." ;;
+        pt:paused_body) text="A luz noturna do Plasma está em pausa pelo seu interruptor na bandeja do sistema. Volte a ligá-la aí para ter o âmbar." ;;
         pt:sched) text="Liga às %s, desliga às %s." ;;
         pt:sched_none) text="Sem horário." ;;
         pt:usage) text="Utilização: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule HH:MM HH:MM | schedule off" ;;
@@ -123,6 +131,7 @@ say() {  # say KEY [number]
         ru:failed_body) text="Диспетчер окон отклонил эффект." ;;
         ru:no_tint) text="Не удалось применить янтарный оттенок" ;;
         ru:no_tint_body) text="Ночная цветовая схема недоступна на этом экране. Экран серый и затемнённый, но всё ещё излучает синий свет." ;;
+        ru:paused_body) text="Ночная цветовая схема Plasma приостановлена её переключателем в системном лотке. Включите её там снова, чтобы получить янтарный оттенок." ;;
         ru:sched) text="Включается в %s, выключается в %s." ;;
         ru:sched_none) text="Расписания нет." ;;
         ru:usage) text="Использование: readers-night on | off | toggle | status | brightness N | gray on|off | notify on|off | schedule ЧЧ:ММ ЧЧ:ММ | schedule off" ;;
@@ -241,6 +250,22 @@ night_light_available() {
     [ "$reply" != "b false" ]      # no answer (KWin not up yet) is not a refusal
 }
 
+# Plasma's Night Light switch in the system tray does not turn Night Light off: it asks
+# KWin to inhibit it, and holds that inhibition until flipped again (or until
+# plasmashell quits). Night Light then reports itself enabled but not running, and the
+# screen has no amber whatever this command writes. Prints true, false, or nothing when
+# KWin does not answer.
+night_light_inhibited() {
+    case "$(busctl --user get-property org.kde.KWin /org/kde/KWin/NightLight org.kde.KWin.NightLight inhibited 2>/dev/null)" in
+        "b true") echo true ;;
+        "b false") echo false ;;
+    esac
+}
+
+# Written when the watcher switched the filter off because that switch paused Night
+# Light: flipping the switch back then switches the filter back on.
+PAUSED="$CONF_DIR/paused-by-plasma"
+
 plasma_switch() {
     # The key makes KWin bring the effect back by itself at the next login.
     kwrite Plugins "${EFFECT}Enabled" "$1"
@@ -261,8 +286,13 @@ plasma_switch() {
         fi
         # No reply at all: KWin is not running yet (a timer at login); the key will do.
         night_light_take
+        rm -f "$PAUSED"
         if ! night_light_available; then
             notify "$(say no_tint)" "$(say no_tint_body)"
+            return 0
+        fi
+        if [ "$(night_light_inhibited)" = true ]; then
+            notify "$(say no_tint)" "$(say paused_body)"
             return 0
         fi
     else
@@ -281,6 +311,69 @@ plasma_reload() {
 plasma_set_brightness() { kwrite "Effect-$EFFECT" Brightness "$1"; plasma_reload; }
 plasma_set_gray() { kwrite "Effect-$EFFECT" Grayscale "$1"; plasma_reload; }
 plasma_set_notify() { kwrite "Effect-$EFFECT" Notify "$1"; }
+
+# --- Plasma's Night Light switch: a watcher ----------------------------------
+
+# Follows the `inhibited` property of KWin's Night Light. Paused while the filter is on:
+# the filter goes off (Night Light given back, the mark written). Resumed while the mark
+# is there: the filter comes back. A pause the user makes while the filter is already
+# off is theirs and is left alone. Runs as a systemd user service for the session; KWin
+# may not be up yet when it starts, or restart under it, so every reading is retried.
+plasma_watch() {
+    local last="" now line
+    sync_to() {   # sync_to true|false: what the switch says now
+        if [ "$1" = true ]; then
+            if plasma_active; then
+                switch_to false
+                mkdir -p "$CONF_DIR"; touch "$PAUSED"
+            fi
+        elif [ -e "$PAUSED" ]; then
+            rm -f "$PAUSED"
+            switch_to true
+        fi
+    }
+    until [ -n "$last" ]; do last="$(night_light_inhibited)"; [ -n "$last" ] || sleep 2; done
+    sync_to "$last"
+    busctl --user monitor --json=short \
+        --match "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/org/kde/KWin/NightLight'" 2>/dev/null \
+    | while read -r line; do
+        case "$line" in *'"inhibited"'*) ;; *) continue ;; esac
+        now="$(night_light_inhibited)"
+        [ -n "$now" ] && [ "$now" != "$last" ] || continue
+        last="$now"
+        sync_to "$now"
+    done
+    return 1    # the bus went away: let systemd start us again
+}
+
+WATCH_UNIT="readers-night-watch.service"
+
+watcher_install() {
+    mkdir -p "$UNIT_DIR"
+    cat > "$UNIT_DIR/$WATCH_UNIT" <<UNIT
+[Unit]
+Description=Reader's Night Filter: follow Plasma's Night Light switch
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=$SELF watcher-run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
+UNIT
+    systemctl --user daemon-reload 2>/dev/null
+    systemctl --user enable "$WATCH_UNIT" >/dev/null 2>&1
+    systemctl --user restart "$WATCH_UNIT" >/dev/null 2>&1
+}
+
+watcher_remove() {
+    systemctl --user disable --now "$WATCH_UNIT" >/dev/null 2>&1
+    rm -f "$UNIT_DIR/$WATCH_UNIT" "$PAUSED"
+    systemctl --user daemon-reload 2>/dev/null
+}
 
 # --- schedule: one systemd timer, two times ----------------------------------
 
@@ -387,6 +480,9 @@ case "${1:-status}" in
         elif [ $# -eq 3 ]; then schedule_set "$2" "$3"
         else die usage 2; fi ;;
     apply-schedule) apply_schedule ;;
+    watcher-run) [ "$B" = plasma ] || exit 0; plasma_watch ;;        # the service's command
+    watcher-install) [ "$B" = plasma ] || exit 0; watcher_install ;;  # the installer's
+    watcher-remove) watcher_remove ;;
     settings)      # GNOME has a settings window; on Plasma the settings are the commands above
         [ "$B" = gnome ] && exec gnome-extensions prefs "$UUID"
         say usage; echo ;;

@@ -57,6 +57,20 @@ turns white into 70 % gray.
   KWin started in a bare container.
 - Night Light follows `kwinrc` when a key is written with `kwriteconfig6 --notify`; an
   unchanged value notifies nothing, so every key is written that way.
+- The Night Light switch in Plasma's tray (the Brightness and Colour applet) does not
+  write `Active=false`: it calls `inhibit` on `org.kde.KWin.NightLight` and holds the
+  cookie. KWin then reports `enabled` true, `inhibited` true, `running` false, 6500 K,
+  and the KWin effect alone stays: gray and dim, no amber. The cookie is tied to the
+  caller's bus connection (`uninhibit` only removes the caller's own), so the command
+  cannot release it; it survives `Active` being deleted and only goes when the applet
+  flips it back or plasmashell quits. Hence `readers-night watcher-run`, a systemd user
+  service (`readers-night-watch.service`, wanted by `graphical-session.target`): it
+  listens to `PropertiesChanged` on that object with `busctl monitor --json=short`,
+  rereads `inhibited` on each, switches the filter off when a pause arrives while it is
+  on (leaving `paused-by-plasma` in the config folder) and back on when the pause ends
+  while that mark is there. A pause made while the filter is off is the user's own and
+  is left alone. `readers-night on` under a pause still works but says the amber is
+  missing and where the switch is.
 - Screenshots are taken before Night Light is applied: its colour cannot be tested
   that way, only its state over D-Bus.
 - Tested on KWin 6.7.4 (Manjaro), virtual output, OpenGL through the host's Intel render

@@ -123,6 +123,49 @@ P
     expect "launcher switches on" "$(shot launcher-on)" "88,88,88 153,153,153 54,54,54 90,90,90 178,178,178"
     $exec_line; sleep 2
 
+    # Plasma's Night Light switch in the tray: an inhibition held by a client. The
+    # watcher (a systemd service on a real desktop) is run by hand here. The holder must
+    # stay connected: KWin drops an inhibition when its client leaves the bus.
+    $RN watcher-run > "$OUT/watcher.log" 2>&1 &
+    watcher=$!; sleep 3
+    python3 - <<'P' > "$OUT/inhibitor.log" 2>&1 &
+import gi, time
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio, GLib
+bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+bus.call_sync("org.kde.KWin", "/org/kde/KWin/NightLight", "org.kde.KWin.NightLight", "inhibit", None, None, 0, -1)
+print("inhibiting", flush=True)
+time.sleep(8)
+P
+    holder=$!; sleep 4
+    nli() { busctl --user get-property org.kde.KWin /org/kde/KWin/NightLight org.kde.KWin.NightLight inhibited; }
+    [ "$(nli)" = "b true" ] && ok "test setup: Night Light inhibited" || bad "test setup: Night Light not inhibited"
+    expect "tray switch off: plain colours" "$(shot tray-off)" "$PLAIN"
+    [ -e ~/.config/readers-night/paused-by-plasma ] && ok "watcher marked the pause" || bad "no pause mark"
+    users_own && ok "Night Light given back while paused" || bad "Night Light while paused: $(nl)"
+    wait $holder; sleep 4
+    [ "$(nli)" = "b false" ] && ok "test setup: inhibition released" || bad "test setup: still inhibited"
+    expect "tray switch on again: gray, 70 %" "$(shot tray-on)" "88,88,88 153,153,153 54,54,54 90,90,90 178,178,178"
+    [ "$(nl)" = "b true u 0 u 1900 " ] && ok "Night Light taken again: constant 1900 K" || bad "Night Light after resume: $(nl)"
+    [ ! -e ~/.config/readers-night/paused-by-plasma ] && ok "pause mark cleared" || bad "pause mark left"
+    # Paused while the filter is off: the user's own business, the filter stays off.
+    $RN off; sleep 1
+    python3 - <<'P' > /dev/null 2>&1 &
+import gi, time
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio
+bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+bus.call_sync("org.kde.KWin", "/org/kde/KWin/NightLight", "org.kde.KWin.NightLight", "inhibit", None, None, 0, -1)
+time.sleep(5)
+P
+    holder=$!; sleep 3
+    [ "$(busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects isEffectLoaded s readersnight)" = "b false" ] && [ ! -e ~/.config/readers-night/paused-by-plasma ] \
+        && ok "a pause while off is left alone" || bad "a pause while off switched something"
+    wait $holder; sleep 3
+    [ "$(busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects isEffectLoaded s readersnight)" = "b false" ] && ok "resume while off: still off" || bad "resume while off switched on"
+    kill $watcher 2>/dev/null; wait $watcher 2>/dev/null
+    $RN on; sleep 2
+
     grep -c 'string "Night filter on"' "$OUT/notifications.log" | grep -q '^[2-9]' && ok "notifications sent for on" || bad "no notification for on"
     grep -q 'string "Night filter off"' "$OUT/notifications.log" && ok "notification sent for off" || bad "no notification for off"
     grep -q 'string "Gray and amber, brightness 70 %"' "$OUT/notifications.log" && ok "notification says the look" || bad "notification body missing"
